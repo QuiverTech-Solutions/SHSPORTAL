@@ -63,7 +63,7 @@ async def paystack_webhook(
         event = await request.json()
         transaction_data = SuccessfulTransaction(**event["data"])
 
-        # Here you can handle the successful transaction data, such as updating your database
+        #handlimg successful transaction data, such as updating your database
 
         return JSONResponse(content={"message": "Webhook received successfully"}, status_code=200)
     except HTTPException as e:
