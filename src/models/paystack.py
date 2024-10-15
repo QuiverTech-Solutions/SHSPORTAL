@@ -46,25 +46,6 @@ class CreatePayment(CoreModel):
         return str(v)
 
 
-class CreateSubscriptionPlan(CoreModel):
-    """Model for creating a subscription plan."""
-    
-    student_id: int
-    email: str = None
-    name: Optional[str]
-    payment_plan_id: int
-
-    @field_validator("name")
-    def name_must_not_be_empty(
-        cls,
-        v: str,
-        info: ValidationInfo,
-    ) -> str:
-        """Ensure the name is not empty by inserting student ID in there."""
-        if not v:
-            v = info.data["student_id"]
-        return str(v)
-
 
 class VerifyTransaction(CoreModel):
     """Model for verifying a transaction."""
