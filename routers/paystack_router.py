@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from typing import Any
 
-from services.paystack import PaystackService 
-from models.paystack import CreatePayment, VerifyTransaction, SuccessfulTransaction
+from src.services.paystack import PaystackService 
+from src.models.paystack import CreatePayment, VerifyTransaction, SuccessfulTransaction
 
 paystack_router = APIRouter()
 
