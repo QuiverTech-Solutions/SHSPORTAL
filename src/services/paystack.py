@@ -6,19 +6,18 @@ import hmac
 import httpx
 from fastapi import HTTPException
 
-from src.core.config import PAYSTACK_BASE_URL, PAYSTACK_SECRET_KEY
+
 from src.models.payment_plans import PaymentPlanInDB
 from src.models.paystack import CreatePayment, CreateSubscriptionPlan
-from src.services.utils import UtilsService
+from src.services.utils import SHSApplicationUtils
 
 
 class PaystackService:
     """A class to handle Paystack API requests."""
 
     def __init__(self) -> None:
-        """Initialize the Paystack class."""
-        self.base_url = PAYSTACK_BASE_URL
-        self.secret_key = PAYSTACK_SECRET_KEY
+        self.base_url = "PAYSTACK_BASE_URL"
+        self.secret_key = "PAYSTACK_SECRET_KEY"
 
     async def create_payment(
         self,
@@ -30,7 +29,7 @@ class PaystackService:
             raise HTTPException(status_code=400, detail="Amount must be greater than 0")
         try:
             url = f"{self.base_url}transaction/initialize"
-            reference = UtilsService.generate_transaction_id(
+            reference = SHSApplicationUtils.generate_transaction_id(
                 create_payment.email, create_payment.telegram_id
             )
             headers = {
@@ -88,7 +87,7 @@ class PaystackService:
         """This function creates a subscription plan using the Paystack API with the specified email and amount."""
         try:
             url = f"{self.base_url}transaction/initialize"
-            reference = UtilsService.generate_transaction_id(
+            reference = SHSApplicationUtils.generate_transaction_id(
                 create_subscription_plan.email, create_subscription_plan.telegram_id
             )
             headers = {
@@ -166,7 +165,7 @@ class PaystackService:
     async def verify_webhook_signature(self, payload: dict, signature: str) -> bool:
         """This function verifies the signature of a webhook payload."""
         computed_signature = hmac.new(
-            PAYSTACK_SECRET_KEY.encode(), msg=payload, digestmod=hashlib.sha512
+            "PAYSTACK_SECRET_KEY".encode(), msg=payload, digestmod=hashlib.sha512
         ).hexdigest()
 
         return computed_signature == signature

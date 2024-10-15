@@ -1,92 +1,88 @@
-"""Model for paystack."""
-
 from typing import List, Optional
-
 from pydantic import Field, ValidationInfo, field_validator
-
 from src.models.base import CoreModel, IDModelMixin
 
 
 class CustomField(CoreModel):
-    """Custom field for paystack."""
-
+    """Custom field for Paystack (used in metadata)."""
+    
     display_name: str
     variable_name: str
     value: str
 
 
 class Metadata(CoreModel):
-    """Metadata for paystack."""
-
+    """Metadata for Paystack."""
+    
     custom_fields: List[CustomField]
 
 
 class CreatePaymentResponse(CoreModel):
-    """A model for the response of creating a payment."""
-
+    """Model for the response of creating a payment."""
+    
     authorization_url: str
     access_code: str
     reference: str
 
 
 class CreatePayment(CoreModel):
-    """A model for creating payment."""
+    """Model for creating a payment."""
+    
+    student_id: int
+    email: Optional[str] = Field(None, description="Student's email address (optional)")
+    name: Optional[str]
+    application_fee: float
+    application_year: int
 
-    telegram_id: int
-    email: Optional[str] = Field(None, description="User's email address (optional)")
-    telegram_username: Optional[str]
-    answers_count: int
-    questions_count: int
-
-    @field_validator("telegram_username")
+    @field_validator("name")
     def name_must_not_be_empty(
         cls,
         v: str,
         info: ValidationInfo,
     ) -> str:
-        """Ensure the username is not empty by inserting ID in there."""
+        """Ensure the name is not empty by inserting student ID in there."""
         if not v:
-            v = info.data["telegram_id"]
+            v = info.data["student_id"]
         return str(v)
 
 
 class CreateSubscriptionPlan(CoreModel):
-    """A model for creating a subscription plan."""
-
-    telegram_id: int
+    """Model for creating a subscription plan."""
+    
+    student_id: int
     email: str = None
-    telegram_username: Optional[str]
+    name: Optional[str]
     payment_plan_id: int
 
-    @field_validator("telegram_username")
+    @field_validator("name")
     def name_must_not_be_empty(
         cls,
         v: str,
         info: ValidationInfo,
     ) -> str:
-        """Ensure the username is not empty by inserting ID in there."""
+        """Ensure the name is not empty by inserting student ID in there."""
         if not v:
-            v = info.data["telegram_id"]
+            v = info.data["student_id"]
         return str(v)
 
 
 class VerifyTransaction(CoreModel):
-    """A model for verifying the transaction."""
-
+    """Model for verifying a transaction."""
+    
     status: bool
     message: str
     data: dict
 
 
 class CustomerData(CoreModel):
-    """A model for the customer data."""
-
+    """Model for customer data (used in successful transactions)."""
+    
     email: str
 
 
 class SuccessfulTransaction(CoreModel, IDModelMixin):
-    """A model for a successful transaction."""
-
+    """Model for a successful transaction."""
+    
     status: str
     reference: str
     amount: float
@@ -96,9 +92,7 @@ class SuccessfulTransaction(CoreModel, IDModelMixin):
     customer: CustomerData
     metadata: Metadata
 
-    @field_validator(
-        "amount",
-    )
+    @field_validator("amount")
     def divide_amount_by_100(cls, v: float) -> float:
-        """Divide the amount by 100."""
+        """Divide the amount by 100 (Paystack returns amounts in kobo)."""
         return v / 100
