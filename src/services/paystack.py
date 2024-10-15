@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 
 from src.models.paystack import CreatePayment
-from src.services.utils import SHSApplicationUtils
+from utils import SHSApplicationUtils
 
 
 class PaystackService:

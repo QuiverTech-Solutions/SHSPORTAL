@@ -46,7 +46,7 @@ class SHSApplicationUtils:
                 return None
             except Exception as e:
                 print(e)
-                raise ValueError("Invalid email format")  # noqa
+                raise ValueError("Invalid email format")
         else:
             return None
 
@@ -55,7 +55,7 @@ class SHSApplicationUtils:
         """Check if a student ID is valid, returns the student ID or None."""
         if student_id is not None:
             student_id = student_id.strip()
-            if re.match(r"^[a-zA-Z0-9]{6,}$", student_id):  # Minimum 6 alphanumeric characters
+            if re.match(r"^[a-zA-Z0-9]{6,}$", student_id): 
                 return student_id
             return None
         else:

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers.paystack_router import paystack_router
+from routes.paystack_router import paystack_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
