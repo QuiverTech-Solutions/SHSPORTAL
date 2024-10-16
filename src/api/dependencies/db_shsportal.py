@@ -121,12 +121,11 @@ def create_tables():
     create_admissions_table()
     create_payments_table()
     create_user_accounts_table()
-    create_payment_plans_table()
+  
 
 
 def drop_tables():
     """Downgrade the database."""
-    op.drop_table('payment_plans')
     op.drop_table('user_accounts')
     op.drop_table('payments')
     op.drop_table('admissions')
