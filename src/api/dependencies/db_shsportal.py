@@ -114,49 +114,6 @@ def create_user_accounts_table() -> None:
     )
 
 
-def create_payment_plans_table() -> None:
-    """Create payment plans table."""
-    # Create payment_plans table
-    payment_plan = op.create_table(
-        "payment_plans",
-        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column("name", sa.String(255), nullable=False, unique=True),
-        sa.Column("description", sa.Text, nullable=False),
-        sa.Column("price_percentage", sa.Float, nullable=False),
-        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.true()),
-        *timestamps(),
-        is_deleted(),
-    )
-
-    # Create trigger for updating 'updated_at' column before update
-    op.execute(
-        """
-        CREATE TRIGGER update_payment_plan_modtime
-        BEFORE UPDATE
-        ON payment_plans
-        FOR EACH ROW
-        EXECUTE PROCEDURE update_updated_at_column()
-        """
-    )
-
-    # Insert initial data into payment_plans table
-    op.bulk_insert(
-        payment_plan,
-        [
-            {
-                "name": "Basic",
-                "description": "Basic payment plan description",
-                "price_percentage": 10,
-            },
-            {
-                "name": "Premium",
-                "description": "Premium payment plan description",
-                "price_percentage": 15,
-            },
-        ],
-    )
-
-
 def create_tables():
     """Upgrade the database."""
     create_schools_table()
