@@ -20,8 +20,8 @@ RUN pip install --upgrade pip \
 # Copy the rest of the application
 COPY . .
 
-# Make the script executable
+# Make run.sh executable
 RUN ["chmod", "+x", "./run.sh"]
 
-# Command to run the application
+# Use the custom entrypoint script with Gunicorn
 CMD ["./run.sh"]
