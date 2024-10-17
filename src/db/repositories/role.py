@@ -1,18 +1,14 @@
-"""Roles Repository"""
+"""Role repository."""
 
-from typing import List
+import logging
+from typing import List, Optional
 from uuid import UUID
 
 from databases import Database
 
 from src.db.repositories.base import BaseRepository
-from src.decorators.db import (
-    handle_get_database_exceptions,
-    handle_post_database_exceptions,
-)
-from src.errors.database import FailedToCreateUpdateQueryError, NotFoundError
+from src.errors.database import NotFoundError
 from src.models.role import RoleCreate, RoleInDb, RoleUpdate
-from src.utils.helpers import Helpers
 
 CREATE_ROLE_QUERY = """
 INSERT INTO roles (name)
@@ -21,104 +17,78 @@ RETURNING id, name, created_at, updated_at, is_deleted
 """
 
 GET_ROLE_BY_ID_QUERY = """
-SELECT id, name, created_at, updated_at,is_deleted
+SELECT id, name, created_at, updated_at, is_deleted
 FROM roles
-WHERE id = :id
+WHERE id = :id AND is_deleted = FALSE
 """
 
-GET_ROLE_BY_NAME_QUERY = """
-SELECT id, name, created_at, updated_at,is_deleted
+GET_ROLES_QUERY = """
+SELECT id, name, created_at, updated_at, is_deleted
 FROM roles
-WHERE name = :name
+WHERE is_deleted = FALSE
+ORDER BY created_at DESC
 """
 
-GET_ALL_ROLES_QUERY = """
-SELECT id, name, created_at, updated_at,is_deleted
-FROM roles
+UPDATE_ROLE_QUERY = """
+UPDATE roles
+SET name = :name, updated_at = NOW()
+WHERE id = :id AND is_deleted = FALSE
+RETURNING id, name, created_at, updated_at, is_deleted
 """
 
 DELETE_ROLE_BY_ID_QUERY = """
-DELETE FROM roles
-WHERE id = :id
-RETURNING id
+UPDATE roles
+SET is_deleted = TRUE
+WHERE id = :id AND is_deleted = FALSE
+RETURNING id, name, created_at, updated_at, is_deleted
 """
 
+audit_logger = logging.getLogger("audit")
 
-class RolesRepository(BaseRepository):
-    """Roles Repository"""
+
+class RoleRepository(BaseRepository):
+    """Role repository."""
 
     def __init__(self, db: Database) -> None:
-        """Constructor for Roles Repository"""
+        """Constructor for Role repository."""
         super().__init__(db)
 
-    @handle_post_database_exceptions("Role", already_exists_entity="Role name")
     async def create_role(self, *, new_role: RoleCreate) -> RoleInDb:
         """Create a new role."""
+        audit_logger.info("Adding role...", new_role.model_dump())
         created_role = await self.db.fetch_one(
             query=CREATE_ROLE_QUERY, values=new_role.model_dump()
         )
+        audit_logger.info("Role creation completed")
+
         return RoleInDb(**created_role)
 
-    @handle_get_database_exceptions("Role")
-    async def get_role(self, *, id: UUID = None, name: str = None) -> RoleInDb:
-        """Get a role by id or name."""
-        search_criteria = {
-            "id": (GET_ROLE_BY_ID_QUERY, id),
-            "name": (GET_ROLE_BY_NAME_QUERY, name),
-        }
+    async def get_role(self, *, id: UUID) -> RoleInDb:
+        """Get role by id."""
+        role = await self.db.fetch_one(query=GET_ROLE_BY_ID_QUERY, values={"id": id})
+        if not role:
+            raise NotFoundError(entity_name="Role")
+        return RoleInDb(**role)
 
-        for field, (query, value) in search_criteria.items():
-            if value:
-                role = await self.db.fetch_one(query=query, values={field: value})
-                if role:
-                    return RoleInDb(**role)
-                raise NotFoundError(entity_name="Role", entity_identifier=field)
-        raise ValueError("At least one of id or name must be provided.")
-
-    @handle_get_database_exceptions("Role")
     async def get_roles(self) -> List[RoleInDb]:
         """Get all roles."""
-        roles = await self.db.fetch_all(query=GET_ALL_ROLES_QUERY)
+        roles = await self.db.fetch_all(query=GET_ROLES_QUERY)
         return [RoleInDb(**role) for role in roles]
 
-    @handle_get_database_exceptions("Role")
-    async def update_role(self, *, role_id: UUID, role_update: RoleUpdate) -> RoleInDb:
-        """Updates a Role by role id."""
-        role_record = await self.get_role(id=role_id)
-
-        update_fields = role_update.model_dump(exclude_unset=True)
-        if not update_fields:
-            return RoleInDb(**role_record)
-
-        conditions = {"id": role_id}
-
-        # Generate the update query
-        UPDATE_ROLE_BY_ID_QUERY = Helpers.generate_update_entity_query(
-            table_name="roles",
-            update_fields=update_fields,
-            conditions=conditions,
-        )
-
-        if not UPDATE_ROLE_BY_ID_QUERY:
-            raise FailedToCreateUpdateQueryError("Role")
-
-        # Execute the update query
+    async def update_role(self, *, id: UUID, role_update: RoleUpdate) -> RoleInDb:
+        """Update a role."""
         updated_role = await self.db.fetch_one(
-            query=UPDATE_ROLE_BY_ID_QUERY,
-            values={**update_fields, "id": role_id},
+            query=UPDATE_ROLE_QUERY, values={"id": id, **role_update.model_dump()}
         )
-
         if not updated_role:
-            raise NotFoundError(entity_name="role", entity_identifier=role_id)
-
+            raise NotFoundError(entity_name="Role")
         return RoleInDb(**updated_role)
 
-    @handle_get_database_exceptions("Role")
-    async def delete_role(self, *, id: UUID) -> UUID:
-        """Delete a role by id."""
-        record_id = await self.db.fetch_one(
+    async def delete_role(self, *, id: UUID) -> RoleInDb:
+        """Delete a role by its id."""
+        deleted_role = await self.db.fetch_one(
             query=DELETE_ROLE_BY_ID_QUERY, values={"id": id}
         )
-        if record_id:
-            return record_id
-        raise NotFoundError(entity_name="Role", entity_identifier="id")
+        if not deleted_role:
+            raise NotFoundError(entity_name="Role")
+        return RoleInDb(**deleted_role)

@@ -4,227 +4,136 @@ import logging
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
+import sqlite3
+from datetime import datetime
 
-from databases import Database
-
-from src.db.repositories.base import BaseRepository
-from src.decorators.db import (
-    handle_get_database_exceptions,
-    handle_post_database_exceptions,
-)
-from src.enums.event_type import EventType
-from src.errors.core import ValueError
+from src.models.payments import PaymentCreate, PaymentInDb
 from src.errors.database import NotFoundError
-from src.models.payment import PaymentCreate, PaymentInDb
 
+DATABASE_URL = "db_model.sqlite"  # Adjust with the correct path to your SQLite file
+
+# Define raw SQL queries
 CREATE_PAYMENT_QUERY = """
-INSERT INTO payments (organization_id, vote_event_id, ticket_event_id, event_type, phone_number, amount, reference, affiliate_user_id)
-VALUES (:organization_id, :vote_event_id, :ticket_event_id, :event_type, :phone_number, :amount, :reference, :affiliate_user_id)
-RETURNING id, organization_id, vote_event_id, ticket_event_id, event_type, phone_number, amount, reference, affiliate_user_id, created_at, updated_at, is_deleted
+INSERT INTO payments (student_id, school_id, total_amount, school_amount, admin_amount, 
+                      payment_status, payment_method, transaction_reference, paid_at)
+VALUES (:student_id, :school_id, :total_amount, :school_amount, :admin_amount, 
+        :payment_status, :payment_method, :transaction_reference, :paid_at)
+RETURNING id, student_id, school_id, total_amount, school_amount, admin_amount, 
+          payment_status, payment_method, transaction_reference, paid_at, created_at, updated_at
 """
 
 GET_PAYMENT_BY_ID_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE id = :id AND is_deleted = FALSE
+SELECT * FROM payments WHERE id = :id
 """
 
 GET_PAYMENTS_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE is_deleted = FALSE
-ORDER BY created_at DESC
+SELECT * FROM payments ORDER BY created_at DESC
 """
 
-GET_PAYMENTS_BY_ORGANIZATION_ID_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE organization_id = :organization_id AND is_deleted = FALSE
-ORDER BY created_at DESC
-"""
-
-GET_PAYMENTS_BY_VOTE_EVENT_ID_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE vote_event_id = :vote_event_id AND is_deleted = FALSE
-ORDER BY created_at DESC
-"""
-
-GET_PAYMENTS_BY_TICKET_EVENT_ID_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE ticket_event_id = :ticket_event_id AND is_deleted = FALSE
-ORDER BY created_at DESC
-"""
-
-GET_PAYMENT_BY_REFERENCE_QUERY = """
-SELECT id, organization_id, vote_event_id, ticket_event_id, event_type, amount, phone_number, reference, affiliate_user_id, created_at, updated_at, is_deleted
-FROM payments
-WHERE reference = :reference AND is_deleted = FALSE
-"""
-
-GET_TOTAL_PAYMENTS_BY_ORGANIZATION_ID_QUERY = """
-SELECT SUM(amount) AS total_payments
-FROM payments
-WHERE organization_id = :organization_id AND is_deleted = FALSE
-"""
-
-GET_TOTAL_PAYMENTS_BY_VOTE_EVENT_ID_QUERY = """
-SELECT SUM(amount) AS total_payments
-FROM payments
-WHERE vote_event_id = :vote_event_id AND is_deleted = FALSE
-"""
-
-GET_TOTAL_PAYMENTS_BY_TICKET_EVENT_ID_QUERY = """
-SELECT SUM(amount) AS total_payments
-FROM payments
-WHERE ticket_event_id = :ticket_event_id AND is_deleted = FALSE
-"""
-
-GET_TOTAL_PAYMENTS_BY_EVENT_TYPE_QUERY = """
-SELECT SUM(amount) AS total_payments
-FROM payments
-WHERE event_type = :event_type AND is_deleted = FALSE
+UPDATE_PAYMENT_QUERY = """
+UPDATE payments SET student_id = :student_id, school_id = :school_id, total_amount = :total_amount, 
+                    school_amount = :school_amount, admin_amount = :admin_amount, 
+                    payment_status = :payment_status, payment_method = :payment_method, 
+                    transaction_reference = :transaction_reference, paid_at = :paid_at
+WHERE id = :id
+RETURNING *;
 """
 
 DELETE_PAYMENT_BY_ID_QUERY = """
-UPDATE payments
-SET is_deleted = TRUE
-WHERE id = :id AND is_deleted = FALSE
-RETURNING id, organization_id, vote_event_id, ticket_event_id, event_type, amount, reference, affiliate_user_id, created_at, updated_at, is_deleted
+DELETE FROM payments WHERE id = :id
 """
+
 audit_logger = logging.getLogger("audit")
 
 
-class PaymentRepository(BaseRepository):
+class PaymentRepository:
     """Payment repository."""
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db_url: str = DATABASE_URL) -> None:
         """Constructor for Payment repository."""
-        super().__init__(db)
+        self.db_url = db_url
 
-    @handle_post_database_exceptions(
-        "Payment", "Event id, organization id", "Reference"
-    )
-    async def create_payment(self, *, new_payment: PaymentCreate) -> PaymentInDb:
+    def _get_connection(self):
+        """Create a new database connection."""
+        return sqlite3.connect(self.db_url)
+
+    def create_payment(self, new_payment: PaymentCreate) -> PaymentInDb:
         """Create a new payment."""
-        audit_logger.info("Adding payment...", new_payment.model_dump())
-        created_payment = await self.db.fetch_one(
-            query=CREATE_PAYMENT_QUERY, values=new_payment.model_dump()
-        )
-        audit_logger.info("Payment, added completed")
+        audit_logger.info("Adding payment...", new_payment.dict())
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-        return PaymentInDb(**created_payment)
+        try:
+            cursor.execute(CREATE_PAYMENT_QUERY, new_payment.dict())
+            payment_data = cursor.fetchone()
+            conn.commit()
+            audit_logger.info("Payment added successfully")
+            return PaymentInDb(**dict(payment_data))
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+            conn.close()
 
-    @handle_get_database_exceptions("Payment")
-    async def get_payment(
-        self, *, id: UUID = None, reference: str = None
-    ) -> PaymentInDb:
-        """Get payment by id and organization id."""
-        search_criteria = {
-            "id": (GET_PAYMENT_BY_ID_QUERY, id),
-            "reference": (GET_PAYMENT_BY_REFERENCE_QUERY, reference),
-        }
+    def get_payment(self, id: UUID) -> PaymentInDb:
+        """Get payment by id."""
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-        for field, (query, value) in search_criteria.items():
-            if value:
-                payment = await self.db.fetch_one(query=query, values={field: value})
-                if payment:
-                    return PaymentInDb(**payment)
-                raise NotFoundError(entity_name=field)
+        try:
+            cursor.execute(GET_PAYMENT_BY_ID_QUERY, {"id": str(id)})
+            payment_data = cursor.fetchone()
+            if payment_data is None:
+                raise NotFoundError(f"Payment with id {id} not found")
+            return PaymentInDb(**dict(payment_data))
+        finally:
+            cursor.close()
+            conn.close()
 
-        raise ValueError("Please provide a valid payment reference or id")
-
-    @handle_get_database_exceptions("Payment")
-    async def get_payments(
-        self,
-        *,
-        organization_id: UUID = None,
-        vote_event_id: UUID = None,
-        ticket_event_id: UUID = None,
-    ) -> List[PaymentInDb]:
+    def get_payments(self) -> List[PaymentInDb]:
         """Get all payments."""
-        search_criteria = {
-            "organization_id": (GET_PAYMENTS_BY_ORGANIZATION_ID_QUERY, organization_id),
-            "vote_event_id": (GET_PAYMENTS_BY_VOTE_EVENT_ID_QUERY, vote_event_id),
-            "ticket_event_id": (GET_PAYMENTS_BY_TICKET_EVENT_ID_QUERY, ticket_event_id),
-        }
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-        for key, (query, value) in search_criteria.items():
-            if value:
-                payments = await self.db.fetch_all(query=query, values={key: value})
-                return [PaymentInDb(**payment) for payment in payments]
+        try:
+            cursor.execute(GET_PAYMENTS_QUERY)
+            payments = cursor.fetchall()
+            return [PaymentInDb(**dict(payment)) for payment in payments]
+        finally:
+            cursor.close()
+            conn.close()
 
-        payments = await self.db.fetch_all(query=GET_PAYMENTS_QUERY)
-        return [PaymentInDb(**payment) for payment in payments]
+    def update_payment(self, id: UUID, updated_payment: PaymentCreate) -> PaymentInDb:
+        """Update a payment by id."""
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-    @handle_get_database_exceptions("Payment")
-    async def get_organization_total_payments(
-        self,
-        *,
-        organization_id: UUID,
-        vote_event_id: Optional[UUID] = None,
-        ticket_event_id: Optional[UUID] = None,
-        event_type: Optional[EventType] = None,
-    ) -> List[PaymentInDb]:
-        """Get all payments by organization id."""
-        base_query = GET_PAYMENTS_BY_ORGANIZATION_ID_QUERY
-        query_values = {"organization_id": organization_id}
+        try:
+            cursor.execute(
+                UPDATE_PAYMENT_QUERY, {**updated_payment.dict(), "id": str(id)}
+            )
+            payment_data = cursor.fetchone()
+            conn.commit()
+            if payment_data is None:
+                raise NotFoundError(f"Payment with id {id} not found")
+            return PaymentInDb(**dict(payment_data))
+        finally:
+            cursor.close()
+            conn.close()
 
-        if vote_event_id:
-            base_query += " AND vote_event_id = :vote_event_id"
-            query_values["vote_event_id"] = vote_event_id
-
-        if ticket_event_id:
-            base_query += " AND ticket_event_id = :ticket_event_id"
-            query_values["ticket_event_id"] = ticket_event_id
-
-        if event_type:
-            base_query += " AND event_type = :event_type"
-            query_values["event_type"] = event_type.value
-
-        payments = await self.db.fetch_all(query=base_query, values=query_values)
-        return [PaymentInDb(**payment) for payment in payments]
-
-    @handle_get_database_exceptions("Payment")
-    async def get_total_payments(
-        self,
-        *,
-        organization_id: UUID = None,
-        vote_event_id: UUID = None,
-        ticket_event_id: UUID = None,
-        event_type: Optional[EventType] = None,
-    ) -> Decimal:
-        """Get total payments."""
-        search_criteria = {
-            "organization_id": (
-                GET_TOTAL_PAYMENTS_BY_ORGANIZATION_ID_QUERY,
-                organization_id,
-            ),
-            "vote_event_id": (GET_TOTAL_PAYMENTS_BY_VOTE_EVENT_ID_QUERY, vote_event_id),
-            "ticket_event_id": (
-                GET_TOTAL_PAYMENTS_BY_TICKET_EVENT_ID_QUERY,
-                ticket_event_id,
-            ),
-            "event_type": (
-                GET_TOTAL_PAYMENTS_BY_EVENT_TYPE_QUERY,
-                event_type.value if event_type else None,
-            ),
-        }
-
-        for key, (query, value) in search_criteria.items():
-            if value:
-                total_payment = await self.db.fetch_val(
-                    query=query, values={key: value}
-                )
-                return total_payment or 0.0
-
-        raise ValueError("Please provide a valid search criteria")
-
-    @handle_get_database_exceptions("Payment")
-    async def delete_payment(self, *, id: UUID) -> PaymentInDb:
+    def delete_payment(self, id: UUID) -> None:
         """Delete a payment by its id."""
-        deleted_payment = await self.db.fetch_one(
-            query=DELETE_PAYMENT_BY_ID_QUERY, values={"id": id}
-        )
-        return PaymentInDb(**deleted_payment)
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(DELETE_PAYMENT_BY_ID_QUERY, {"id": str(id)})
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()

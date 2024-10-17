@@ -7,7 +7,7 @@ from databases import Database
 
 from src.db.repositories.base import BaseRepository
 from src.db.repositories.role import RolesRepository
-from src.db.repositories.user import UserRepository
+from src.db.repositories.users import UserRepository
 from src.decorators.db import (
     handle_get_database_exceptions,
     handle_post_database_exceptions,
