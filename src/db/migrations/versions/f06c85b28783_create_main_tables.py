@@ -179,6 +179,61 @@ def create_settings_table() -> None:
     )
 
 
+def create_school_wallets_table() -> None:
+    """Create wallets for schools to track balances in SQLite."""
+    op.create_table(
+        "school_wallets",
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column(
+            "school_admin_id", sa.String, sa.ForeignKey("users.user_id"), nullable=False
+        ),
+        sa.Column(
+            "school_id",
+            sa.String,
+            sa.ForeignKey("schools.id"),
+            nullable=False,
+            unique=True,
+        ),
+        sa.Column("current_balance", sa.Float, nullable=False, default=0.00),
+        sa.Column("total_earned", sa.Float, nullable=False, default=0.00),
+        sa.Column("last_updated", sa.DateTime),
+        *timestamps(),
+        is_deleted(),
+    )
+
+
+def create_super_admin_wallet_table() -> None:
+    """Create wallet for super admin with a reference to the superadmin's user ID in SQLite."""
+    op.create_table(
+        "super_admin_wallet",
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column(
+            "user_id",
+            sa.String,
+            sa.ForeignKey("users.user_id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("current_balance", sa.Float, nullable=False, default=0.00),
+        sa.Column("total_earned", sa.Float, nullable=False, default=0.00),
+        sa.Column("last_updated", sa.DateTime, nullable=False),
+        sa.Column("created_at", sa.DateTime, nullable=False),
+    )
+    # # Insert the initial superadmin wallet with zero balance
+    # op.bulk_insert(
+    #     op.get_table("superadmin_wallet"),
+    #     [
+    #         {
+    #             "id": "f6fd6f26-fba5-4927-a2f5-dfdeb4248ca1",  # Static UUID for superadmin wallet
+    #             "user_id": "f6fd6f26-fba5-4927-a2f5-dfdeb4248ca1",  # Assuming this is the superadmin's user_id
+    #             "current_balance": 0.00,
+    #             "total_earned": 0.00,
+    #             "created_at": datetime.now(timezone.utc),
+    #             "last_updated": datetime.now(timezone.utc),
+    #         }
+    #     ],
+    # )
+
+
 def upgrade() -> None:
     """Upgrade database."""
     create_roles_table()
@@ -189,11 +244,15 @@ def upgrade() -> None:
     create_transactions_table()
     create_payments_table()
     create_settings_table()
+    create_school_wallets_table()
+    create_super_admin_wallet_table()
 
 
 def downgrade() -> None:
     """Downgrade database."""
     tables = [
+        "super_admin_wallet",
+        "school_wallets",
         "user_roles",
         "roles",
         "transactions",

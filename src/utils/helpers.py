@@ -8,7 +8,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-import nanoid
 
 
 class Helpers:
@@ -58,10 +57,10 @@ class Helpers:
 
         return update_query
 
-    @staticmethod
-    def generate_nano_id(size: int = 12) -> str:
-        """Generate a random string of fixed size."""
-        return nanoid.generate(size=size)
+    # @staticmethod
+    # def generate_nano_id(size: int = 12) -> str:
+    #     """Generate a random string of fixed size."""
+    #     return nanoid.generate(size=size)
 
     @staticmethod
     def generate_short_code(

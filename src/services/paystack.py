@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 from fastapi import HTTPException
 
-from models.paystack.payment import CreateVotingUSSDPayment
+from src.models.paystack.payment import CreateVotingUSSDPayment
 from src.core.config import PAYSTACK_BASE_URL, PAYSTACK_SECRET_KEY
 from src.errors.paystack import (
     PaystackAccountNumberError,
