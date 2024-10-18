@@ -6,7 +6,7 @@ from uuid import UUID
 from databases import Database
 
 from src.db.repositories.base import BaseRepository
-from src.db.repositories.role import RolesRepository
+from src.db.repositories.role import RoleRepository
 from src.db.repositories.users import UserRepository
 from src.decorators.db import (
     handle_get_database_exceptions,
@@ -51,7 +51,7 @@ class UserRoleRepository(BaseRepository):
     def __init__(self, db: Database) -> None:
         """Constructor for User Role Repository"""
         super().__init__(db)
-        self.roles_repo = RolesRepository(db)
+        self.roles_repo = RoleRepository(db)
         self.user_repository = UserRepository(db)
 
     @handle_post_database_exceptions(

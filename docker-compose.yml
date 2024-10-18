@@ -2,11 +2,10 @@ version: "1.0"
 
 services:
   web:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.dev
     volumes:
-      - .:/SHSPORTAL  # Ensure it includes all necessary files
+      - .:/SHSPORTAL
     ports:
-      - "8008:8000"   # Adjusted to match the application binding port
-
+      - "8008:8000"

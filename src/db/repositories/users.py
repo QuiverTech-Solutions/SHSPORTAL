@@ -1,102 +1,70 @@
-"""Model for User."""
+"""User Repository"""
 
-from enum import Enum
-from typing import Optional
+from typing import List, Optional
+from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from databases import Database
+from fastapi.security import OAuth2PasswordRequestForm
 
-from src.models.base import (
-    UUID,
-    DateTimeModelMixin,
-    IsDeletedModelMixin,
-    UserIDModelMixin,
+from src.db.repositories.base import BaseRepository
+from src.decorators.db import (
+    handle_get_database_exceptions,
+    handle_post_database_exceptions,
 )
-from src.utils.validators import Validators
+from src.models.token import AccessToken
+from src.models.users import UserCreate, UserInDb, UserUpdate
 
 
-class UserStatus(str, Enum):
-    """User status enum."""
+class UserRepository(BaseRepository):
+    """Contains logic for all user operations."""
 
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    DELETED = "deleted"
+    def __init__(self, db: Database) -> None:
+        """Initializes(gets) DB."""
+        super().__init__(db)
 
+    @handle_post_database_exceptions(
+        "User", already_exists_entity="Email or referral code"
+    )
+    async def create_user(self, *, new_user: UserCreate) -> Optional[UserInDb]:
+        """Creates a new user."""
+        return
 
-class UserBase(BaseModel):
-    """User base model"""
+    async def login(self, user_request: OAuth2PasswordRequestForm) -> AccessToken:
+        """Logs in a user."""
+        return
 
-    first_name: str = Field(..., min_length=2)
-    last_name: str = Field(..., min_length=2)
-    email: EmailStr = Field(...)
-    phone_number: str
-    referred_by: Optional[UUID] = Field(None)
+    @handle_get_database_exceptions("User")
+    async def get_user(
+        self, *, email: str = None, user_id: UUID = None
+    ) -> Optional[UserInDb]:
+        """Gets a user by email,  phone_number, username, or user_id."""
+        return
 
-    @field_validator("email")
-    def email_to_lowercase(cls, value: str) -> str:
-        """Converts email to lowercase"""
-        return value.lower()
+    @handle_get_database_exceptions("User")
+    async def get_users(self) -> List[UserInDb]:
+        """Gets all users."""
+        return
 
-    class Config:
-        """Configurations for the class."""
+    @handle_get_database_exceptions("User")
+    async def get_total_users(self) -> int:
+        """Gets the total number of users."""
+        return
 
-        from_attributes = True
-        validate_assignment = True
+    @handle_post_database_exceptions("User", "Role")
+    async def update_user_roles(
+        self, *, user_id: UUID, new_role: str, type: str = "add"
+    ) -> Optional[UserInDb]:
+        """Adds a role to the user."""
+        return
 
-    @field_validator("phone_number")
-    def validate_phone_number(cls, value: str) -> str:
-        """Validates phone number"""
-        if not Validators.is_valid_phonenumber(value):
-            raise ValueError("Invalid phone number")
-        return value
+    @handle_get_database_exceptions("User")
+    async def update_user(
+        self, *, user_id: UUID, user_update: UserUpdate, is_admin: bool = False
+    ) -> Optional[UserInDb]:
+        """Updates an user by user_id."""
+        return
 
-
-class UserCreate(UserBase):
-    """User create model"""
-
-    password_hash: str = Field(...)
-
-
-class UserPublic(UserBase, DateTimeModelMixin, UserIDModelMixin):
-    """User Public model"""
-
-    roles: set[str]
-    referral_code: str
-    referral_count: int
-    successful_referral_count: int  # Generated >1000 cedis revenue
-    status: UserStatus = Field(default=UserStatus.ACTIVE)
-
-
-class UserInDb(UserPublic, IsDeletedModelMixin):
-    """User in Db model"""
-
-    password_hash: str
-
-
-class UserPublicWithOrganizationWithAffiliateUser(UserPublic):
-    """User Public with Organization model"""
-
-    organization_id: Optional[UUID]
-    organization_name: Optional[str]
-    affiliate_id: Optional[UUID]
-    affiliate_code: Optional[str]
-
-
-class UserUpdate(BaseModel):
-    """User update model"""
-
-    first_name: Optional[str] = Field(None, min_length=2)
-    last_name: Optional[str] = Field(None, min_length=2)
-    phone_number: Optional[str] = Field(None, min_length=9)
-    email: EmailStr = Field(...)
-
-    @field_validator("email")
-    def email_to_lowercase(cls, value: str) -> str:
-        """Converts email to lowercase"""
-        return value.lower()
-
-    class Config:
-        """Configurations for the class."""
-
-        from_attributes = True
-        validate_assignment = True
-        forbid = True
+    @handle_get_database_exceptions("User")
+    async def delete_user(self, *, user_id: UUID) -> UUID:
+        """Deletes a user by user_id."""
+        return

@@ -9,7 +9,6 @@ from src.api.dependencies.auth import get_super_admin
 from src.api.dependencies.database import get_repository
 from src.db.repositories.setting import SettingsRepository
 from src.models.settings import SettingsCreate, SettingsPublic
-from src.models.users import UserPublicWithOrganizationWithAffiliateUser
 
 settings_router = APIRouter()
 
@@ -22,9 +21,7 @@ settings_router = APIRouter()
 async def create_settings(
     settings_create: SettingsCreate,
     settings_repo: SettingsRepository = Depends(get_repository(SettingsRepository)),
-    get_super_admin: UserPublicWithOrganizationWithAffiliateUser = Depends(
-        get_super_admin
-    ),
+    get_super_admin: str = Depends(get_super_admin),
 ) -> SettingsPublic:
     """Create a new settings."""
     return await settings_repo.create_settings(settings_create)
@@ -37,9 +34,7 @@ async def create_settings(
 )
 async def get_settings(
     settings_repo: SettingsRepository = Depends(get_repository(SettingsRepository)),
-    get_super_admin: UserPublicWithOrganizationWithAffiliateUser = Depends(
-        get_super_admin
-    ),
+    get_super_admin: str = Depends(get_super_admin),
 ) -> List[SettingsPublic]:
     """Get all settings."""
     return await settings_repo.get_settings()
@@ -54,9 +49,7 @@ async def get_setting(
     id: Optional[UUID] = Query(None, description="The setting's ID"),
     settings_repo: SettingsRepository = Depends(get_repository(SettingsRepository)),
     key: Optional[str] = Query(None, description="The setting's key"),
-    get_super_admin: UserPublicWithOrganizationWithAffiliateUser = Depends(
-        get_super_admin
-    ),
+    get_super_admin: str = Depends(get_super_admin),
 ) -> SettingsPublic:
     """Get settings by key."""
     if not (id or key):
@@ -81,9 +74,7 @@ async def update_setting(
     key: str,
     settings_update: SettingsCreate,
     settings_repo: SettingsRepository = Depends(get_repository(SettingsRepository)),
-    get_super_admin: UserPublicWithOrganizationWithAffiliateUser = Depends(
-        get_super_admin
-    ),
+    get_super_admin: str = Depends(get_super_admin),
 ) -> SettingsPublic:
     """Update settings by key."""
     return await settings_repo.update_setting(key, settings_update)
@@ -97,9 +88,7 @@ async def update_setting(
 async def delete_setting(
     key: str,
     settings_repo: SettingsRepository = Depends(get_repository(SettingsRepository)),
-    get_super_admin: UserPublicWithOrganizationWithAffiliateUser = Depends(
-        get_super_admin
-    ),
+    get_super_admin: str = Depends(get_super_admin),
 ) -> None:
     """Delete settings by key."""
     await settings_repo.delete_setting(key)

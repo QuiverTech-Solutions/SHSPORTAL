@@ -18,7 +18,9 @@ class PaymentBase(BaseModel):
     total_amount: Decimal = Field(..., gt=0)  # Total payment amount
     school_amount: Decimal = Field(..., gt=0)  # 80% amount to school
     admin_amount: Decimal = Field(..., gt=0)  # 20% amount to admin
-    payment_status: str = Field(..., regex="^(pending|completed|failed)$")
+    payment_status: str = Field(
+        ...
+    )  # TODO: Update to Enum with options ['pending', 'completed', 'failed']
     payment_method: str = Field(
         ..., min_length=2, max_length=50
     )  # e.g., 'momo', 'bank'
@@ -35,7 +37,7 @@ class PaymentCreate(PaymentBase):
 class PaymentUpdate(BaseModel):
     """Payment update model"""
 
-    payment_status: Optional[str] = Field(None, regex="^(pending|completed|failed)$")
+    payment_status: Optional[str] = Field(None)
     payment_method: Optional[str] = Field(None, min_length=2, max_length=50)
     transaction_reference: Optional[str] = Field(None, min_length=5, max_length=100)
     paid_at: Optional[datetime] = None

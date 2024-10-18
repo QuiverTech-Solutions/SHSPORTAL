@@ -1,12 +1,18 @@
+"""Admin wallet routes."""
+
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.api.dependencies.auth import get_current_admin, get_current_user
+from src.api.dependencies.auth import get_current_user, get_super_admin
 from src.api.dependencies.database import get_repository
 from src.db.repositories.admin_wallet import AdminWalletRepository
-from src.models.admin_wallet import AdminWalletCreate, AdminWalletPublic, AdminWalletUpdate
+from src.models.admin_wallet import (
+    AdminWalletCreate,
+    AdminWalletPublic,
+    AdminWalletUpdate,
+)
 from src.models.users import UserInDb
 
 admin_wallet_router = APIRouter()
@@ -18,7 +24,7 @@ admin_wallet_router = APIRouter()
 async def create_admin_wallet(
     new_wallet: AdminWalletCreate,
     wallet_repo: AdminWalletRepository = Depends(get_repository(AdminWalletRepository)),
-    current_admin: UserInDb = Depends(get_current_admin),
+    current_admin: str = Depends(get_super_admin),
 ) -> AdminWalletPublic:
     """Create a new admin wallet."""
     return await wallet_repo.create_wallet(new_wallet=new_wallet)
@@ -40,7 +46,9 @@ async def get_all_admin_wallets(
 )
 async def get_admin_wallet(
     id: Optional[UUID] = Query(None, description="The admin wallet's ID"),
-    account_number: Optional[str] = Query(None, description="The admin wallet's account number"),
+    account_number: Optional[str] = Query(
+        None, description="The admin wallet's account number"
+    ),
     wallet_repo: AdminWalletRepository = Depends(get_repository(AdminWalletRepository)),
     current_user: UserInDb = Depends(get_current_user),
 ) -> AdminWalletPublic:
@@ -59,18 +67,24 @@ async def get_admin_wallet(
 
 
 @admin_wallet_router.put(
-    "/{wallet_id}/balance", response_model=AdminWalletPublic, status_code=status.HTTP_200_OK
+    "/{wallet_id}/balance",
+    response_model=AdminWalletPublic,
+    status_code=status.HTTP_200_OK,
 )
 async def update_admin_wallet_balance(
     wallet_id: UUID,
     balance_update: AdminWalletUpdate,
     wallet_repo: AdminWalletRepository = Depends(get_repository(AdminWalletRepository)),
-    current_admin: UserInDb = Depends(get_current_admin),
+    current_admin: UserInDb = Depends(get_super_admin),
 ) -> AdminWalletPublic:
     """Update an admin wallet's balance."""
-    updated_wallet = await wallet_repo.update_wallet_balance(wallet_id=wallet_id, new_balance=balance_update.balance)
+    updated_wallet = await wallet_repo.update_wallet_balance(
+        wallet_id=wallet_id, new_balance=balance_update.balance
+    )
     if not updated_wallet:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found."
+        )
     return updated_wallet
 
 
@@ -78,10 +92,12 @@ async def update_admin_wallet_balance(
 async def delete_admin_wallet(
     wallet_id: UUID,
     wallet_repo: AdminWalletRepository = Depends(get_repository(AdminWalletRepository)),
-    current_admin: UserInDb = Depends(get_current_admin),
+    current_admin: UserInDb = Depends(get_super_admin),
 ) -> UUID:
     """Delete an admin wallet."""
     deleted_wallet = await wallet_repo.delete_wallet(wallet_id=wallet_id)
     if not deleted_wallet:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found."
+        )
     return wallet_id

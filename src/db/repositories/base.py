@@ -3,10 +3,7 @@
 # Third party imports
 
 
-from datetime import datetime, timedelta
-
 from databases import Database
-from dateutil import relativedelta
 
 
 class BaseRepository:

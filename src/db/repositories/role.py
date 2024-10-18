@@ -1,7 +1,7 @@
 """Role repository."""
 
 import logging
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from databases import Database
