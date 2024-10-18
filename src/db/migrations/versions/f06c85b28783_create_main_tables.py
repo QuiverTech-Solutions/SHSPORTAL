@@ -200,6 +200,36 @@ def create_school_wallets_table() -> None:
         *timestamps(),
         is_deleted(),
     )
+def create_admin_wallet_table() -> None:
+    """Create admin wallet table."""
+    op.create_table(
+        "admin_wallets",
+        sa.Column("id", sa.String(36), primary_key=True),  
+        sa.Column("admin_id", sa.String(36), nullable=False),  
+        sa.Column("provider", sa.String(50), default="Paystack"),
+        sa.Column("account_number", sa.String(50), nullable=False, unique=True),
+        sa.Column("balance", sa.Float, nullable=False, default=0),
+        *timestamps(),
+        is_deleted(),
+    )
+
+def create_school_wallet_table() -> None:
+    """Create school wallet table."""
+    op.create_table(
+        "school_wallets",
+        sa.Column("id", sa.String(36), primary_key=True),  # UUID stored as a string
+        sa.Column(
+            "school_id", 
+            sa.String(36), 
+            sa.ForeignKey("schools.id"),  # Foreign key referencing schools
+            nullable=False
+        ),
+        sa.Column("provider", sa.String(50), default="Paystack"),
+        sa.Column("account_number", sa.String(50), nullable=False, unique=True),
+        sa.Column("balance", sa.Float, nullable=False, default=0),
+        *timestamps(),
+        is_deleted(),
+    )
 
 
 def create_super_admin_wallet_table() -> None:
