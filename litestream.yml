@@ -1,4 +1,0 @@
-dbs:
-  - path: shs_portal.sqlite  # Adjust to match your SQLite database filename
-    replicas:
-      - url:sqlite:///./shs_portal.db  

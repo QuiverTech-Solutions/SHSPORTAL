@@ -1,9 +1,8 @@
 """Routes to manage schools."""
 
-from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from src.api.dependencies.database import get_repository
 from src.db.repositories.school import SchoolRepository

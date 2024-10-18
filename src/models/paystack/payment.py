@@ -1,8 +1,8 @@
 """Models for USSD payment."""
 
-
 from decimal import Decimal
 from uuid import UUID
+
 from src.enums.network_provider import NetworkProvider
 from src.models.base import CoreModel
 
@@ -19,7 +19,8 @@ class CreateVotingUSSDPayment(CoreModel):
     """A model for creating payment."""
 
     phone_number: str
+    school_name: str
+    school_id: UUID
+    student_name: str
     amount: Decimal
-    number_of_votes: int
-    nominee_id: UUID
     network_provider: NetworkProvider
