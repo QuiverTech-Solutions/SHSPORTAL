@@ -87,7 +87,11 @@ def create_schools_table() -> None:
         sa.Column("location", sa.String(100), nullable=False),
         sa.Column("registration_fee", sa.Numeric(10, 2), default=0.00),
         sa.Column(
-            "created_at", sa.TIMESTAMP, server_default=sa.text("CURRENT_TIMESTAMP")
+            "created_at", sa.TIMESTAMP, server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.TIMESTAMP, server_default=sa.text("CURRENT_TIMESTAMP"),
+            onupdate=sa.text("CURRENT_TIMESTAMP"), nullable=False
         ),
     )
 
