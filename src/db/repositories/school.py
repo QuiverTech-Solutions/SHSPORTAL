@@ -11,8 +11,8 @@ from src.errors.database import NotFoundError
 from src.models.schools import SchoolCreate, SchoolInDb, SchoolUpdate
 
 CREATE_SCHOOL_QUERY = """
-INSERT INTO schools (name, location, registration_fee)
-VALUES (:name, :location, :registration_fee)
+INSERT INTO schools (name, location, registration_fee, updated_at)
+VALUES (:name, :location, :registration_fee, :updated_at)
 RETURNING id, name, location, registration_fee, created_at, updated_at, is_deleted
 """
 
@@ -24,14 +24,17 @@ WHERE id = :id AND is_deleted = FALSE
 
 UPDATE_SCHOOL_QUERY = """
 UPDATE schools
-SET name = :name, location = :location, registration_fee = :registration_fee, updated_at = NOW()
+SET name = COALESCE(:name, name), 
+    location = COALESCE(:location, location), 
+    registration_fee = COALESCE(:registration_fee, registration_fee), 
+    updated_at = NOW()
 WHERE id = :id AND is_deleted = FALSE
 RETURNING id, name, location, registration_fee, created_at, updated_at, is_deleted
 """
 
 DELETE_SCHOOL_BY_ID_QUERY = """
 UPDATE schools
-SET is_deleted = TRUE
+SET is_deleted = TRUE, updated_at = NOW()
 WHERE id = :id AND is_deleted = FALSE
 RETURNING id, name, location, registration_fee, created_at, updated_at, is_deleted
 """
@@ -49,8 +52,10 @@ class SchoolRepository(BaseRepository):
     async def create_school(self, *, new_school: SchoolCreate) -> SchoolInDb:
         """Create a new school."""
         audit_logger.info("Creating school...", new_school.model_dump())
+        # Ensure updated_at is set during creation
+        values = {**new_school.model_dump(), "updated_at": new_school.updated_at or None}
         created_school = await self.db.fetch_one(
-            query=CREATE_SCHOOL_QUERY, values=new_school.model_dump()
+            query=CREATE_SCHOOL_QUERY, values=values
         )
         audit_logger.info("School creation completed")
 
@@ -65,9 +70,11 @@ class SchoolRepository(BaseRepository):
 
     async def update_school(self, *, id: UUID, school_update: SchoolUpdate) -> SchoolInDb:
         """Update a school."""
+        # Ensure updated_at is always set during update
+        values = {**school_update.model_dump(), "id": id}
         updated_school = await self.db.fetch_one(
             query=UPDATE_SCHOOL_QUERY,
-            values={"id": id, **school_update.model_dump()},
+            values=values,
         )
         if not updated_school:
             raise NotFoundError(entity_name="School")
