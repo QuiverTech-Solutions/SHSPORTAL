@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from src.models.base import CoreModel
+from src.models.baseys import CoreModel
 
 
 class BankData(CoreModel):

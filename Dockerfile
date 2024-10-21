@@ -21,7 +21,8 @@ RUN pip install --upgrade pip \
 COPY . .
 
 # Make run.sh executable
-RUN ["chmod", "+x", "./run.sh"]
+# RUN ["chmod", "+x", "./run.sh"]
+RUN chmod +x ./run.sh
 
 # Use the custom entrypoint script with Gunicorn
 CMD ["./run.sh"]
