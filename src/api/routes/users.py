@@ -12,7 +12,7 @@ from src.models.users import UserCreate, UserPublic, UserUpdate
 from src.services.auth import AuthService
 from src.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 from src.models.token import AccessToken
-from db.repositories import users
+
 
 
 users_router = APIRouter()
@@ -119,7 +119,7 @@ async def signup(user: UserCreate):
     """User sign-up route"""
     
     # Check if the user already exists in your database
-    user_in_db = users.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
+    user_in_db = user.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
     if user_in_db:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -127,14 +127,14 @@ async def signup(user: UserCreate):
     hashed_password = await AuthService.get_password_hash(user.password)
 
     # Insert the new user into the database (replace this with raw SQL insert if needed)
-    users.execute("""
+    UserUpdate("""
         INSERT INTO users (username, email, hashed_password)
         VALUES (?, ?, ?)
     """, (user.username, user.email, hashed_password.decode('utf-8')))
-    users.commit()
+    user.commit()
 
     # Retrieve the new user from the database
-    new_user = users.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
+    new_user = user.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
 
     # Return the public user data (without password)
     return UserPublic(
