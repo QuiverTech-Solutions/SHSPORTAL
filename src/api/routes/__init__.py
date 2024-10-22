@@ -2,6 +2,8 @@
 
 from fastapi import FastAPI
 
+from src.core.config import DATABASE_URL
+
 
 def setup_routes(app: FastAPI) -> None:
     """Configure all application routes."""
@@ -44,4 +46,5 @@ def setup_routes(app: FastAPI) -> None:
 
     @app.get("/", name="index")
     async def index() -> str:
+        return f"This i s the database  url {str(DATABASE_URL)}"
         return "Visit ip_addrESs:8000/docs or localhost8000/docs to view documentation."

@@ -77,8 +77,10 @@ def run_migrations_online() -> None:
 
 
 if context.is_offline_mode():
+    print("This is the database urull", DATABASE_URL)
     print("Running migrations offline.")
     run_migrations_offline()
 else:
+    print("This is the database urull", DATABASE_URL)
     print("Running migrations online.")
     run_migrations_online()
