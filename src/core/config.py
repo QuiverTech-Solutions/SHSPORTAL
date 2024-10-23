@@ -2,6 +2,7 @@
 
 from databases import DatabaseURL
 from starlette.config import Config
+from starlette.datastructures import Secret
 
 config = Config(".env")
 
@@ -44,3 +45,28 @@ if PAYSTACK_ENV == "PROD":
 else:
     PAYSTACK_PUBLIC_KEY = config("PAYSTACK_TEST_PUBLIC_KEY")
     PAYSTACK_SECRET_KEY = config("PAYSTACK_TEST_SECRET_KEY")
+
+# AWS S3 configs
+S3_BUCKET_NAME = config("S3_BUCKET_NAME", cast=str, default="")
+S3_ACCESS_KEY_ID = config("S3_ACCESS_KEY_ID", cast=str, default="")
+S3_SECRET_ACCESS_KEY = config("S3_SECRET_ACCESS_KEY", cast=Secret, default="")
+S3_REGION = config("S3_REGION", cast=str, default="")
+
+# SMTP
+SMTP_HOST = config("SMTP_HOST", cast=str, default="")
+SMTP_PORT = config("SMTP_PORT", cast=int, default=0)
+SMTP_USERNAME = config("SMTP_USERNAME", cast=str, default="")
+SMTP_PASSWORD = config("SMTP_PASSWORD", cast=Secret, default="")
+
+# Sendgrid
+SENDGRID_API_KEY = config("SENDGRID_API_KEY", cast=str, default="")
+
+# MailerSend
+MAILERSEND_API_KEY = config("MAILERSEND_API_KEY", cast=str, default="")
+
+# MailGun
+MAILGUN_API_KEY = config("MAILGUN_API_KEY", cast=str, default="")
+MAILGUN_API_URL = config("MAILGUN_API_URL", cast=str, default="")
+
+# Secret Key
+SECRET_KEY=config("SECRET_KEY", cast=str, default="")
