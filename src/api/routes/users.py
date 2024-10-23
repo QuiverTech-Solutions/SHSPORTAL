@@ -114,31 +114,33 @@ async def refresh(
     return await user_repo.refresh(refresh_token)
 users_router.post("/signup", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 
-
-async def signup(user: UserCreate):
+@users_router.post("/signup", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+async def signup(
+    new_user: UserCreate,
+    user_repo: UserRepository = Depends(get_repository(UserRepository)),
+    auth_service: AuthService = Depends(AuthService),
+) -> UserPublic:
     """User sign-up route"""
-    
-    # Check if the user already exists in your database
-    user_in_db = user.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
+
+    # Check if the user already exists in the database
+    user_in_db = await user_repo.get_user(email=new_user.email)
     if user_in_db:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Hash the password using bcrypt or AuthService
-    hashed_password = await AuthService.get_password_hash(user.password)
+    # Hash the password
+    hashed_password = await auth_service.get_password_hash(new_user.password)
 
-    # Insert the new user into the database (replace this with raw SQL insert if needed)
-    UserUpdate("""
-        INSERT INTO users (username, email, hashed_password)
-        VALUES (?, ?, ?)
-    """, (user.username, user.email, hashed_password.decode('utf-8')))
-    user.commit()
-
-    # Retrieve the new user from the database
-    new_user = user.execute("SELECT * FROM users WHERE email = ?", (user.email,)).fetchone()
+    # Create a new user in the database
+    created_user = await user_repo.create_user(
+        username=new_user.first_name + new_user.last_name,
+        email=new_user.email,
+        hashed_password=hashed_password
+    )
 
     # Return the public user data (without password)
     return UserPublic(
-        id = new_user['id'],
-        username = new_user['username'],
-        email = new_user['email'],
-        created_at = new_user['created_at'])
+        id=created_user.id,
+        username=created_user.username,
+        email=created_user.email,
+        created_at=created_user.created_at,
+    )
